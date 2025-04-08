@@ -1,0 +1,23 @@
+---
+- name: Install doom and expose it via Ingress
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install doom on cluster
+      shell: "./bash/doom_builder.sh"
+      register: doom_install
+
+    - name: Debug - Show doom install
+      debug:
+        msg: "{{ doom_install.stdout_lines }}"

@@ -1,0 +1,58 @@
+---
+- name: Create a Kind Cluster
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first: https://kind.sigs.k8s.io/"
+      when: kind_version.rc != 0
+
+    # - name: Install Helm
+    #   apt:
+    #     name: helm
+    #     state: present
+    #   become: yes
+
+    # - name: Install kubectl
+    #   apt:
+    #     name: kubectl
+    #     state: present
+    #   become: yes
+
+    - name: Fail if no Kind cluster is running
+      fail:
+        msg: "No Kind clusters are running. Start a Kind cluster before running this playbook."
+      when: kind_clusters.stdout | length == 0
+
+    - name: Fetch latest KRO release version from GitHub
+      uri:
+        url: "https://api.github.com/repos/kro-run/kro/releases/latest"
+        return_content: yes
+      register: github_response
+
+    - name: Extract KRO version
+      set_fact:
+        kro_version: "{{ github_response.json.tag_name | regex_replace('^v', '') }}"
+
+    - name: Validate KRO version
+      debug:
+        msg: "KRO Version: {{ kro_version }}"
+
+    - name: Install KRO using Helm
+      command:
+        cmd: "helm install kro oci://ghcr.io/kro-run/kro/kro --namespace kro --create-namespace --version={{ kro_version }}"
+      register: helm_output
+
+    - name: Display Helm installation output
+      debug:
+        msg: "{{ helm_output.stdout }}"
+    
+
+

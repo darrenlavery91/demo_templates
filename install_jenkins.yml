@@ -1,0 +1,97 @@
+---
+- name: Install Jenkins and expose it via Ingress
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install jenkins on cluster
+      shell: ./bash/jenkins_builder.sh
+      register: jenkins_install
+
+    - name: Debug - Show jenkins install
+      debug:
+        msg: "{{ jenkins_install.stdout_lines }}"
+
+    # - name: Get running Kind clusters
+    #   command: kind get clusters
+    #   register: kind_clusters
+    #   changed_when: false
+
+    # - name: Fail if no Kind cluster is running
+    #   fail:
+    #     msg: "No Kind clusters are running. Start a Kind cluster before running this playbook."
+    #   when: kind_clusters.stdout | length == 0
+
+    # - name: Create Jenkins namespace
+    #   command: kubectl create namespace jenkins
+    #   register: namespace_result
+    #   changed_when: "'created' in namespace_result.stdout"
+    #   ignore_errors: true
+
+    # - name: Apply Jenkins Helm repository
+    #   command: helm repo add jenkins https://charts.jenkins.io && helm repo update
+    #   changed_when: false
+
+    # - name: Install Jenkins via Helm
+    #   command: >
+    #     helm install jenkins jenkins/jenkins
+    #     --namespace jenkins
+    #     --set controller.serviceType=ClusterIP
+    #   register: jenkins_install
+    #   changed_when: "'STATUS: deployed' in jenkins_install.stdout"
+
+    # - name: Wait for Jenkins to be ready
+    #   command: kubectl wait --namespace jenkins --for=condition=ready pod --selector=app.kubernetes.io/name=jenkins --timeout=120s
+    #   changed_when: false
+
+    # - name: Create Ingress for Jenkins
+    #   copy:
+    #     dest: /tmp/jenkins-ingress.yaml
+    #     content: |
+    #       apiVersion: networking.k8s.io/v1
+    #       kind: Ingress
+    #       metadata:
+    #         name: jenkins-ingress
+    #         namespace: jenkins
+    #         annotations:
+    #           nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    #       spec:
+    #         rules:
+    #           - host: jenkins.public_darren
+    #             http:
+    #               paths:
+    #                 - path: /
+    #                   pathType: Prefix
+    #                   backend:
+    #                     service:
+    #                       name: jenkins
+    #                       port:
+    #                         number: 8080
+
+    # - name: Apply Ingress for Jenkins
+    #   command: kubectl apply -f /tmp/jenkins-ingress.yaml
+    #   register: ingress_result
+    #   changed_when: "'created' in ingress_result.stdout or 'configured' in ingress_result.stdout"
+
+    # - name: Get Kind cluster IP
+    #   command: podman inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane
+    #   register: kind_ip
+    #   changed_when: false
+
+    # - name: Update /etc/hosts to map jenkins.public_darren
+    #   lineinfile:
+    #     path: /etc/hosts
+    #     line: "{{ kind_ip.stdout }} jenkins.public_darren"
+    #     state: present
+    #   when: kind_ip.stdout | length > 0
+

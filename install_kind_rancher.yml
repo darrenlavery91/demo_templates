@@ -1,0 +1,55 @@
+---
+- name: Set up Kind and Rancher on macOS
+  hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first: https://kind.sigs.k8s.io/"
+      when: kind_version.rc != 0
+
+    - name: Check if kube-cluster01 already exists
+      command: kind get clusters
+      register: existing_clusters
+      changed_when: false
+
+    - name: Create Kind Cluster if not exists
+      command: kind create cluster --name rancher-cluster
+      when: "'kube-cluster01' not in existing_clusters.stdout"
+
+    - name: Get Cluster Information
+      command: kind get clusters
+      register: cluster_info
+      changed_when: false
+
+    - debug:
+        msg: "{{ cluster_info.stdout }}"
+    
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install rancher on cluster
+      shell: ./bash/kind_rancher.sh
+      register: kind_rancher
+
+    - name: Debug - Show kind_rancher install
+      debug:
+        msg: "{{ kind_rancher.stdout_lines }}"
+
+#node port
+#kubectl expose svc rancher --name=rancher --namespace cattle-system --port 80 --target-port 80 --type NodePort --dry-run=client -o yaml | kubectl apply -f -
+#kubectl expose svc rancher --name=rancher-https --namespace cattle-system --port 443 --target-port 443 --type NodePort --dry-run=client -o yaml | kubectl apply -f -
+# then #kubectl port-forward -n cattle-system svc/rancher 8080:80 8443:443

@@ -1,0 +1,33 @@
+---
+- name: Create a Kind Cluster
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first: https://kind.sigs.k8s.io/"
+      when: kind_version.rc != 0
+
+    - name: Check if kube-cluster01 already exists
+      command: kind get clusters
+      register: existing_clusters
+      changed_when: false
+
+    - name: Create Kind Cluster if not exists
+      command: kind create cluster --name kube-cluster01
+      when: "'kube-cluster01' not in existing_clusters.stdout"
+
+    - name: Get Cluster Information
+      command: kind get clusters
+      register: cluster_info
+      changed_when: false
+
+    - debug:
+        msg: "{{ cluster_info.stdout }}"
+

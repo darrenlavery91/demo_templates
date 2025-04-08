@@ -1,0 +1,23 @@
+---
+- name: Install semaphore and expose it via Ingress
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install semaphore on cluster
+      shell: ./bash/semaphore_builder.sh
+      register: semaphore_install
+
+    - name: Debug - Show semaphore install
+      debug:
+        msg: "{{ semaphore_install.stdout_lines }}"

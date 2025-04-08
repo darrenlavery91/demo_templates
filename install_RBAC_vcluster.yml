@@ -1,0 +1,22 @@
+---
+- name: Install RBAC on vCluster
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Install vcluster on cluster
+      shell: "./bash/RBAC_vcluster.sh"
+      register: vcluster_install
+
+    - name: Debug - Show vcluster install
+      debug:
+        msg: "{{ vcluster_install.stdout_lines }}"
+
+    - name: List vClusters
+      command: vcluster list
+      register: vcluster_list
+      changed_when: false
+
+    - name: Debug - Show vCluster list
+      debug:
+        msg: "{{ vcluster_list.stdout_lines }}"
+

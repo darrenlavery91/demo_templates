@@ -1,0 +1,89 @@
+---
+- name: Install K3s and Rancher
+  hosts: localhost
+  connection: local
+  become: yes
+  tasks:
+    - name: Install K3s
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.30.10+k3s1 K3S_TOKEN=supersecrettoken sh -s - server \
+          --cluster-init \
+          --tls-san={{ ansible_default_ipv4.address }} \
+          --disable=traefik
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Check if node is ready
+      shell: k3s kubectl get node
+      register: node_status
+      until: node_status.stdout | search("Ready")
+      retries: 5
+      delay: 30
+      failed_when: false
+
+    - name: Copy k3s config file to local kube config
+      copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ ansible_env.HOME }}/.kube/config"
+        remote_src: yes
+      when: node_status.stdout | search("Ready")
+
+    - name: Add Rancher repository to Helm
+      shell: helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+      args:
+        creates: /etc/helm/repositories/rancher-stable
+
+    - name: Update Helm repositories
+      shell: helm repo update
+
+    - name: Create Rancher namespace
+      shell: kubectl create namespace cattle-system
+      when: node_status.stdout | search("Ready")
+
+    - name: Install Rancher using Helm
+      shell: |
+        helm install rancher rancher-stable/rancher \
+          --namespace cattle-system \
+          --set hostname={{ ansible_default_ipv4.address }}.sslip.io \
+          --set bootstrapPassword=SOME_SECRET_PASSWORD \
+          --set ingress.ingressClassName=nginx
+      when: node_status.stdout | search("Ready")
+
+    - name: Expose Rancher via NGINX Ingress
+      shell: |
+        kubectl apply -f - <<EOF
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: nginx-ingress-controller
+          namespace: kube-system
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: nginx-ingress-controller
+          template:
+            metadata:
+              labels:
+                app: nginx-ingress-controller
+            spec:
+              containers:
+                - name: nginx-ingress-controller
+                  image: nginx-ingress-controller:latest
+                  ports:
+                    - containerPort: 80
+                      protocol: TCP
+                    - containerPort: 443
+                      protocol: TCP
+        EOF
+      when: node_status.stdout | search("Ready")
+
+    - name: Ensure Ingress is exposed
+      shell: kubectl get ingress -n cattle-system
+      register: ingress_status
+      until: ingress_status.stdout | search("rancher")
+      retries: 5
+      delay: 10
+      failed_when: false
+
+

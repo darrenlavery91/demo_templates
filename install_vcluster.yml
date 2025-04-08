@@ -1,0 +1,33 @@
+---
+- name: Install vCluster if Kind cluster is running
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install vcluster on cluster
+      shell: "./bash/vcluster_builder.sh"
+      register: vcluster_install
+
+    - name: Debug - Show vcluster install
+      debug:
+        msg: "{{ vcluster_install.stdout_lines }}"
+
+    - name: List vClusters
+      command: vcluster list
+      register: vcluster_list
+      changed_when: false
+
+    - name: Debug - Show vCluster list
+      debug:
+        msg: "{{ vcluster_list.stdout_lines }}"
+

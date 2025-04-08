@@ -1,0 +1,111 @@
+- name: Install ArgoCD and expose it via Ingress
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      ignore_errors: true
+
+    - name: Fail if Kind is not installed
+      fail:
+        msg: "Kind is not installed! Please install it first."
+      when: kind_version.rc != 0
+
+    - name: Install argocd on cluster
+      shell: ./bash/argocd_2_builder.sh
+      register: argocd_install
+
+    - name: Debug - Show argocd install
+      debug:
+        msg: "{{ argocd_install.stdout_lines }}"
+
+    # Uncomment to check for running Kind clusters
+    # - name: Get running Kind clusters
+    #   command: kind get clusters
+    #   register: kind_clusters
+    #   changed_when: false
+
+    # Uncomment to fail if no Kind cluster is running
+    # - name: Fail if no Kind cluster is running
+    #   fail:
+    #     msg: "No Kind clusters are running. Start a Kind cluster before running this playbook."
+    #   when: kind_clusters.stdout | length == 0
+
+    # - name: Create ArgoCD namespace
+    #   community.kubernetes.k8s:
+    #     name: argocd
+    #     api_version: v1
+    #     kind: Namespace
+    #     state: present
+
+    # - name: Apply ArgoCD manifests
+    #   community.kubernetes.k8s:
+    #     name: "argocd-server"
+    #     namespace: argocd
+    #     state: present
+    #     definition: "{{ lookup('url', 'https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml') }}"
+
+    # - name: Wait for ArgoCD server to be ready
+    #   community.kubernetes.k8s_info:
+    #     api_version: apps/v1
+    #     kind: Pod
+    #     namespace: argocd
+    #     label_selectors:
+    #       - app.kubernetes.io/name=argocd-server
+    #   register: argocd_pods
+    #   until: argocd_pods.resources | length > 0 and argocd_pods.resources[0].status.phase == 'Running'
+    #   retries: 12
+    #   delay: 10
+
+    # - name: Patch ArgoCD server to use LoadBalancer instead of ClusterIP
+    #   community.kubernetes.k8s:
+    #     name: argocd-server
+    #     namespace: argocd
+    #     state: merged
+    #     definition:
+    #       apiVersion: v1
+    #       kind: Service
+    #       metadata:
+    #         name: argocd-server
+    #       spec:
+    #         type: LoadBalancer
+
+    # - name: Create Ingress for ArgoCD
+    #   community.kubernetes.k8s:
+    #     name: argocd-ingress
+    #     namespace: argocd
+    #     state: present
+    #     definition:
+    #       apiVersion: networking.k8s.io/v1
+    #       kind: Ingress
+    #       metadata:
+    #         name: argocd-ingress
+    #         annotations:
+    #           nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    #       spec:
+    #         rules:
+    #           - host: argocd.public_darren
+    #             http:
+    #               paths:
+    #                 - path: /
+    #                   pathType: Prefix
+    #                   backend:
+    #                     service:
+    #                       name: argocd-server
+    #                       port:
+    #                         number: 80
+
+    # - name: Get Kind cluster IP
+    #   command: podman inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' kind-control-plane
+    #   register: kind_ip
+    #   changed_when: false
+
+    # - name: Update /etc/hosts to map argocd.public_darren
+    #   lineinfile:
+    #     path: /etc/hosts
+    #     line: "{{ kind_ip.stdout }} argocd.public_darren"
+    #     state: present
+    #   when: kind_ip.stdout | length > 0
+
