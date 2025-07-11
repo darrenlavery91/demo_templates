@@ -115,7 +115,7 @@ Move-Item .\kind-windows-amd64.exe c:\some-dir-in-your-PATH\kind.exe
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 ```
-
+ref: https://kind.sigs.k8s.io
 ---
 
 ### Example: Installing a Component
