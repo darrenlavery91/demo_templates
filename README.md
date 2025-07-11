@@ -37,6 +37,8 @@ This repository is designed to help you **quickly build sandbox environments** f
 I'm always experimenting and adding new tools or improvements.
 Feel free to contribute! Fork the repo, create a branch, and submit your changes via pull request.
 
+I ahve only tested this really on MACOS, but if you are using windows, best would be run ansible from WSL.
+
 Happy building! 🛠️
 
 ---
@@ -81,6 +83,7 @@ Please ensure **either Podman Desktop** or **Docker** is installed and running o
    ```powershell
    choco install ansible -y
    ```
+Note for Windows users: Try use WSL2 + Ubuntu and run ansible inside WSL
 
 ---
 
